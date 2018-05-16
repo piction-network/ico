@@ -57,3 +57,6 @@ $ truffle migrate --network mainnet_token
 
 ## Test
 
+## License
+
+PIXEL is available under the MIT license. See the LICENSE file for more info.
