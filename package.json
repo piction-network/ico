@@ -1,5 +1,5 @@
 {
-  "name": "token",
+  "name": "ico",
   "version": "0.0.1",
   "description": "This is contract of Pixel token.",
   "main": "truffle.js",
@@ -7,13 +7,24 @@
     "test": "test"
   },
   "scripts": {
+    "test": "truffle test",
+    "test:testnet": "truffle test --network testnet_token",
+    "migrate": "truffle migrate --network development --reset",
+    "migrate:testnet": "truffle migrate --network testnet_token --reset",
+    "migrate:mainnet": "truffle migrate --network mainnet_token --reset"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/piction-network/ico.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "homepage": "https://github.com/piction-network/ico#readme",
   "dependencies": {
     "openzeppelin-solidity": "git+https://github.com/OpenZeppelin/openzeppelin-solidity.git"
   },
   "devDependencies": {
+    "truffle-flattener": "^1.2.5",
     "truffle-hdwallet-provider-privkey": "0.2.0"
   }
 }
