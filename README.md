@@ -1,7 +1,6 @@
+# PIXEL Token Contract
 
-# PIXEL
-
-Official PIXL implementation based on OpenZepplin StandardToken ERC-20 contract.
+Official PIXEL implementation based on OpenZepplin StandardToken ERC-20 contract.
 
 Please visit [Piction Network](https://piction.network) to get more PIXEL information.
 
