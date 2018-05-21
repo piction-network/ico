@@ -3,4 +3,6 @@ out
 **/.DS_Store
 node_modules
 build
-env.js
+
+# local environment files
+.env.*
