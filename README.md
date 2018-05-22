@@ -8,23 +8,19 @@ Please visit [Piction Network](https://piction.network) to get more PIXEL inform
 - [truffle](https://github.com/trufflesuite/truffle) (global dependency)
 - [zeppelin-solidity](https://github.com/OpenZeppelin/openzeppelin-solidity)
 - [truffle-hdwallet-provider-privkey](https://github.com/rhlsthrm/truffle-hdwallet-provider-privkey)
+- [dotenv-flow](https://github.com/kerimdzhanov/dotenv-flow)
 
 ## Setting
 
 `truffle-hdwallet-provider-privkey` uses wallet's private key to authenticate accounts in ethereum network.
-Register developer's wallet address and private key in `env.js` like this.
+Register developer's wallet address and private key in `.env.<network>` like this.
 
 ```javascript
-module.exports = Object.freeze({
-  testnet: {
-    privateKey: '4224a7...',
-    developersAddress: '0xE6b7...'
-  },
-  mainnet: {
-   privateKey: '4224a...',
-   developersAddress: '0xE6b7...'
-  }
-});
+$ cp .env .env.<network>
+
+--- .env.<network> ---
+PRIVATE_KEY=<PRIVATE_KEY>
+DEVELOPERS_ADDRESS=<DEVELOPERS_ADDRESS>
 ```
 
 ## Install 
