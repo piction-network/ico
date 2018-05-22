@@ -5,8 +5,8 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./OwnableToken.sol";
 
 contract PXL is StandardToken, OwnableToken {
-    using SafeMath for uint256;    
-    
+    using SafeMath for uint256;
+
     // Token Information
     string public constant name = "Pixel";
     string public constant symbol = "PXL";
@@ -17,7 +17,7 @@ contract PXL is StandardToken, OwnableToken {
     // (to prevent OTC before the token to be listed on exchanges)
     bool isTransferable = false;
 
-    constructor(uint256 initialSupply) public {                        
+    constructor(uint256 initialSupply) public {
         require(initialSupply > 0);
 
         totalSupply = initialSupply;
@@ -38,12 +38,12 @@ contract PXL is StandardToken, OwnableToken {
         return super.transfer(_to, _value);
     }
 
-//////////////////////
-//  mint and burn   //
-//////////////////////
-    function mint(address _to,uint256 _amount) onlyOwner public returns (bool) {
+    //////////////////////
+    //  mint and burn   //
+    //////////////////////
+    function mint(address _to, uint256 _amount) onlyOwner public returns (bool) {
         require(_to != address(0));
-        require(_amount >= 0);        
+        require(_amount >= 0);
 
         totalSupply = totalSupply.add(_amount);
         balances[_to] = balances[_to].add(_amount);

@@ -15,7 +15,7 @@ contract TestSale is Whitelist, Pausable {
     uint256 public constant exceed = 10 ether;
     uint256 public constant minimum = 0.1 ether;
     uint256 public constant rate = 1000;
-    
+
     uint256 public weiRaised;
     address public wallet;
     ERC20 public token;
@@ -23,20 +23,20 @@ contract TestSale is Whitelist, Pausable {
     constructor (address _wallet, address _token) public {
         require(_wallet != address(0));
         require(_token != address(0));
-        
+
         wallet = _wallet;
         token = ERC20(_token);
         weiRaised = 0;
     }
 
-//////////////////
-//  collect eth
-//////////////////
+    //////////////////
+    //  collect eth
+    //////////////////
 
-    mapping (address => uint256) public buyers;
+    mapping(address => uint256) public buyers;
     address[] private keys;
 
-    function () external payable {
+    function() external payable {
         collect(msg.sender);
     }
 
@@ -47,7 +47,7 @@ contract TestSale is Whitelist, Pausable {
         require(buyers[_buyer] < exceed);
 
         // get exist amount
-        if(buyers[_buyer] == 0) {
+        if (buyers[_buyer] == 0) {
             keys.push(_buyer);
         }
 
@@ -66,9 +66,9 @@ contract TestSale is Whitelist, Pausable {
         emit BuyTokens(_buyer, purchase, tokenAmount);
     }
 
-//////////////////
-//  validation functions for collect
-//////////////////
+    //////////////////
+    //  validation functions for collect
+    //////////////////
 
     function preValidation() private constant returns (bool) {
         // check minimum
@@ -81,9 +81,9 @@ contract TestSale is Whitelist, Pausable {
 
     // 1. check over exceed
     function checkOverExceed(address _buyer) private constant returns (uint256) {
-        if(msg.value >= exceed) {
+        if (msg.value >= exceed) {
             return exceed;
-        } else if(msg.value.add(buyers[_buyer]) >= exceed) {
+        } else if (msg.value.add(buyers[_buyer]) >= exceed) {
             return exceed.sub(buyers[_buyer]);
         } else {
             return msg.value;
@@ -92,16 +92,16 @@ contract TestSale is Whitelist, Pausable {
 
     // 2. check sale hardcap
     function checkOverMaxcap(uint256 amount) private constant returns (uint256) {
-        if((amount + weiRaised) >= maxcap) {
+        if ((amount + weiRaised) >= maxcap) {
             return (maxcap.sub(weiRaised));
         } else {
             return amount;
         }
     }
 
-//////////////////
-//  release
-//////////////////
+    //////////////////
+    //  release
+    //////////////////
     bool finalized = false;
 
     function release() external onlyOwner {
@@ -110,7 +110,7 @@ contract TestSale is Whitelist, Pausable {
 
         wallet.transfer(address(this).balance);
 
-        for(uint256 i = 0; i < keys.length; i++) {
+        for (uint256 i = 0; i < keys.length; i++) {
             token.safeTransfer(keys[i], buyers[keys[i]].mul(rate));
             emit Release(keys[i], buyers[keys[i]].mul(rate));
         }
@@ -126,7 +126,7 @@ contract TestSale is Whitelist, Pausable {
 
         withdraw();
 
-        for(uint256 i = 0; i < keys.length; i++) {
+        for (uint256 i = 0; i < keys.length; i++) {
             keys[i].transfer(buyers[keys[i]]);
             emit Refund(keys[i], buyers[keys[i]]);
         }
@@ -139,9 +139,9 @@ contract TestSale is Whitelist, Pausable {
         emit Withdraw(wallet, token.balanceOf(this));
     }
 
-//////////////////
-//  events
-//////////////////
+    //////////////////
+    //  events
+    //////////////////
 
     event Release(address indexed _to, uint256 _amount);
     event Withdraw(address indexed _from, uint256 _amount);

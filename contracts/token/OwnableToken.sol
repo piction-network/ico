@@ -1,8 +1,8 @@
 pragma solidity ^0.4.23;
 
 contract OwnableToken {
-  
-    mapping (address => bool) owners;
+
+    mapping(address => bool) owners;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event OwnershipExtended(address indexed host, address indexed guest);
