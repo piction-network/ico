@@ -7,11 +7,14 @@
     "test": "test"
   },
   "scripts": {
-    "test": "truffle test",
+    "ganache-run": "docker run --name ganache -d -p 8545:8545 trufflesuite/ganache-cli -a 50 -e 1000000",
+    "ganache-stop": "docker rm -f ganache",
+    "test": "npm run ganache-run; truffle test; npm run ganache-stop",
     "test:testnet": "truffle test --network testnet_token",
     "migrate": "truffle migrate --network development --reset",
     "migrate:testnet": "truffle migrate --network testnet_token --reset",
-    "migrate:mainnet": "truffle migrate --network mainnet_token --reset"
+    "migrate:mainnet": "truffle migrate --network mainnet_token --reset",
+    "console": "npm run ganache-run; npm run migrate; truffle console; npm run ganache-stop"
   },
   "repository": {
     "type": "git",
