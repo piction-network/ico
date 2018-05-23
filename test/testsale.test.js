@@ -186,7 +186,7 @@ contract('TestSale', (accounts) => {
     let amount1 = web3.toBigNumber(web3.toWei(5));
     let amount2 = web3.toBigNumber(web3.toWei(10));
 
-    it("can not release token before achieving maxcap.", async () => {
+    it("should refund all ethers when cannot meet maxcap.", async () => {
       buyers.forEach(async (buyer) => {
         try { await web3.eth.sendTransaction({gas: 1000000, to: testsale.address, value: amount1, from: buyer}); }
         catch(error) {}
@@ -199,10 +199,24 @@ contract('TestSale', (accounts) => {
 
       // token release will be rejected before achieving maxcap
       await testsale.release({from: owner}).should.be.rejected;
+      // refund raised ethers to buyer
+      await testsale.refund({from: owner}).should.be.fulfilled;
+
+      // check testsale ether balance
+      let testsaleBalance = await web3.eth.getBalance(testsale.address);
+      testsaleBalance.should.be.bignumber.equal(0);
+
+      // withdraw all tokens
+      let walletTokenBalance = await token.balanceOf(wallet);
+      walletTokenBalance.should.be.bignumber.equal(maxcap.mul(rate));
     });
 
     it("should release token after achieving maxcap.", async () => {
       let initialWalletBalance = await web3.eth.getBalance(wallet);
+      let initialBuyerBalance = buyers.map(async (buyer) => {
+        let balance = await web3.eth.getBalance(buyer);
+        return balance;
+      });
 
       buyers.forEach(async (buyer) => {
         try { await web3.eth.sendTransaction({gas: 1000000, to: testsale.address, value: amount2, from: buyer}); }
@@ -230,28 +244,11 @@ contract('TestSale', (accounts) => {
         let balance = await token.balanceOf(buyer);
         balance.should.be.bignumber.equal(amount2.mul(rate));
       });
-    });
 
-    it("should refund all ethers when cannot meet maxcap.", async () => {
-      buyers.forEach(async (buyer) => {
-        try { await web3.eth.sendTransaction({gas: 1000000, to: testsale.address, value: amount1, from: buyer}); }
-        catch(error) {}
+      let laterBuyerBalance = buyers.map(async (buyer) => {
+        let balance = await web3.eth.getBalance(buyer);
+        return balance;
       });
-
-      // check total ethers TestSale received.
-      let weiRaised = await testsale.weiRaised.call();
-      weiRaised.should.be.bignumber.equal(amount1.mul(buyers.length));
-      weiRaised.should.be.bignumber.lessThan(maxcap);
-
-      await testsale.refund({from: owner}).should.be.fulfilled;
-
-      // check testsale ether balance (all refunded)
-      let testsaleBalance = await web3.eth.getBalance(testsale.address);
-      testsaleBalance.should.be.bignumber.equal(0);
-
-      // check all tokens were transferred to wallet address
-      let walletTokenBalance = await token.balanceOf(wallet);
-      walletTokenBalance.should.be.bignumber.equal(maxcap.mul(rate));
     });
   });
 });
