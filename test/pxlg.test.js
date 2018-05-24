@@ -87,7 +87,7 @@ contract('PXLG', function (accounts) {
 
     it("Should be able to minted by owner.", async () => {
         const beforeBalance = await token.balanceOf.call(owner);
-        await token.mint(owner, mintPXLG, { from: owner });
+        await token.mint(mintPXLG, { from: owner });
         const afterBalance = await token.balanceOf.call(owner);
 
         afterBalance.minus(beforeBalance).should.be.bignumber.equal(mintPXLG);
