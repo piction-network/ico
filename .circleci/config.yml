@@ -1,0 +1,35 @@
+version: 2
+
+general:
+  branches:
+    only:
+      - master
+      - /feature/circleci
+
+jobs:
+  build:
+    docker:
+      - image: circleci/node:8.11.2
+      - image: trufflesuite/ganache-cli
+        command: |
+          -a 50
+          -e 1000000
+    working_directory: ~/ico
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install Truffle
+          command: |
+            sudo npm install -g truffle
+            npm install
+      - run:
+          name: test env
+          command: |
+            mv truffle.js truffle_test.js
+            mv truffle_dev.js truffle.js
+      - run:
+          name: Run Test
+          command: |
+            truffle test
