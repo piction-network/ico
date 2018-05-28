@@ -80,6 +80,11 @@ contract Presale is Stateable {
         setState(State.Completed);
     }
 
+    modifier completed() {
+        require(getState() == State.Completed);
+        _;
+    }
+
     function collect() public payable {
         address buyer = msg.sender;
         uint256 amount = msg.value;
@@ -129,80 +134,61 @@ contract Presale is Stateable {
         return (possibleAmount, _amount.sub(possibleAmount));
     }
 
-    function min(uint256 val1, uint256 val2) private returns (uint256){
+    function min(uint256 val1, uint256 val2) private pure returns (uint256){
         return (val1 > val2) ? val2 : val1;
     }
 
-    function release(address _addr) private validAddress(_addr) returns (bool) {
-        if (buyers[_addr] == 0) {
-            return false;
-        }
-
-        uint256 releaseAmount = buyers[_addr].mul(rate);
-        buyers[_addr] = 0;
-
-        token.safeTransfer(_addr, releaseAmount);
-        emit Release(_addr, releaseAmount);
-
-        return true;
-    }
-
-    function release(address[] _addrs) external onlyOwner {
-        require(getState() == State.Completed);
+    modifier limit(address[] _addrs) {
         require(_addrs.length <= 30);
-
-        for (uint256 i = 0; i < _addrs.length; i++)
-            if (!release(_addrs[i])) {
-                emit Fail(_addrs[i], "release");
-            }
+        _;
     }
 
-    function refund(address _addr) private validAddress(_addr) returns (bool) {
-        if (buyers[_addr] == 0) {
-            return false;
+    function release(address _addr) private validAddress(_addr) {
+        if (buyers[_addr] > 0) {
+            uint256 releaseAmount = buyers[_addr].mul(rate);
+            buyers[_addr] = 0;
+            token.safeTransfer(_addr, releaseAmount);
+            emit Release(_addr, releaseAmount);
+        } else {
+            emit Fail(_addr, "release");
         }
-
-        uint256 refundAmount = buyers[_addr];
-        buyers[_addr] = 0;
-
-        _addr.transfer(refundAmount);
-        emit Refund(_addr, refundAmount);
-
-        return true;
     }
 
-    function refund(address[] _addrs) external onlyOwner {
-        require(getState() == State.Completed);
-        require(_addrs.length <= 30);
-
+    function release(address[] _addrs) external onlyOwner completed limit(_addrs) {
         for (uint256 i = 0; i < _addrs.length; i++) {
-            if (!refund(_addrs[i])) {
-                emit Fail(_addrs[i], "refund");
-            }
+            release(_addrs[i]);
         }
     }
 
-    function finalize() external onlyOwner {
-        require(getState() == State.Completed);
+    function refund(address _addr) private validAddress(_addr) {
+        if (buyers[_addr] > 0) {
+            uint256 refundAmount = buyers[_addr];
+            buyers[_addr] = 0;
+            _addr.transfer(refundAmount);
+            emit Refund(_addr, refundAmount);
+        } else {
+            emit Fail(_addr, "refund");
+        }
+    }
 
+    function refund(address[] _addrs) external onlyOwner completed limit(_addrs) {
+        for (uint256 i = 0; i < _addrs.length; i++) {
+            refund(_addrs[i]);
+        }
+    }
+
+    function finalize() external onlyOwner completed {
         withdrawEther();
         withdrawToken();
-
         setState(State.Finalized);
     }
 
-    function withdrawToken() public onlyOwner {
-        require(getState() == State.Completed);
-
-        if (token.balanceOf(address(this)) > 0) {
-            token.safeTransfer(wallet, token.balanceOf(address(this)));
-            emit WithdrawToken(wallet, token.balanceOf(address(this)));
-        }
+    function withdrawToken() public onlyOwner completed {
+        token.safeTransfer(wallet, token.balanceOf(address(this)));
+        emit WithdrawToken(wallet, token.balanceOf(address(this)));
     }
 
-    function withdrawEther() public onlyOwner {
-        require(getState() == State.Completed);
-
+    function withdrawEther() public onlyOwner completed {
         wallet.transfer(address(this).balance);
         emit WithdrawEther(wallet, address(this).balance);
     }

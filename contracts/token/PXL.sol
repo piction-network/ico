@@ -34,7 +34,7 @@ contract PXL is StandardToken, OwnableToken {
         totalSupply = initialSupply;
         balances[msg.sender] = totalSupply;
 
-        Transfer(address(0), msg.sender, initialSupply);
+        emit Transfer(address(0), msg.sender, initialSupply);
     }
 
     function() public payable {
@@ -87,14 +87,14 @@ contract PXL is StandardToken, OwnableToken {
         totalSupply = totalSupply.add(_amount);
         balances[msg.sender] = balances[msg.sender].add(_amount);
 
-        Mint(msg.sender, _amount);
-        Transfer(address(0), msg.sender, _amount);
+        emit Mint(msg.sender, _amount);
+        emit Transfer(address(0), msg.sender, _amount);
         return true;
     }
 
     /**
      * @dev Burns a specific amount of tokens.
-     * @param _value The amount of token to be burned.
+     * @param _amount The amount of token to be burned.
      */
     function burn(uint256 _amount) onlyOwner public {
         require(_amount <= balances[msg.sender]);
@@ -102,7 +102,7 @@ contract PXL is StandardToken, OwnableToken {
         totalSupply = totalSupply.sub(_amount);
         balances[msg.sender] = balances[msg.sender].sub(_amount);
 
-        Burn(msg.sender, _amount);
+        emit Burn(msg.sender, _amount);
     }
 
     event Mint(address indexed _to, uint256 _amount);

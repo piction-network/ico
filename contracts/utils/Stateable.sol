@@ -9,7 +9,7 @@ contract Stateable is Ownable {
 
     event OnStateChange(string _state);
 
-    function Stateable() {
+    constructor() public {
         state = State.Unknown;
     }
 
@@ -22,12 +22,12 @@ contract Stateable is Ownable {
         return state;
     }
 
-    function getMyEnumKeyByValue (State _state) private view returns (string) {
-        if (State.Preparing == state) return "Preparing";
-        if (State.Starting == state) return "Starting";
-        if (State.Pausing == state) return "Pausing";
-        if (State.Completed == state) return "Completed";
-        if (State.Finalized == state) return "Finalized";
+    function getMyEnumKeyByValue(State _state) private pure returns (string) {
+        if (State.Preparing == _state) return "Preparing";
+        if (State.Starting == _state) return "Starting";
+        if (State.Pausing == _state) return "Pausing";
+        if (State.Completed == _state) return "Completed";
+        if (State.Finalized == _state) return "Finalized";
         return "";
     }
 }
