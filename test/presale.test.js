@@ -70,7 +70,7 @@ contract("PRESALE", function (accounts) {
         });
 
         it("Unregisted buyer in whitelist can't buy tokens.", async () => {
-            try { await web3.eth.sendTransaction({ gas: gas, to: sale.address, value: ether(1), from: unregistedBuyer }); }
+            try { await web3.eth.sendTransaction({ to: sale.address, value: ether(1), from: unregistedBuyer, gas: gas }); }
             catch(error) {}
 
             let balance = await sale.buyers.call(unregistedBuyer);
@@ -79,22 +79,20 @@ contract("PRESALE", function (accounts) {
 
         it("Buyer can get refund when over maxcap.", async () => {
             buyers.forEach(async (buyer) => {
-                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(9), from: buyer, gas: gas, gasPrice: web3.eth.gasPrice }); }
+                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(9), from: buyer, gas: gas }); }
                 catch(error) {}
             });
 
             const before = await web3.eth.getBalance(testAccount);
-            try { await web3.eth.sendTransaction({ to: sale.address, value: ether(7), from: testAccount, gas: gas, gasPrice: web3.eth.gasPrice }); }
+            try { await web3.eth.sendTransaction({ to: sale.address, value: ether(7), from: testAccount, gas: gas }); }
             catch(error) {}
             const after = await web3.eth.getBalance(testAccount);
-            console.log("before: ", before.toNumber());
-            console.log("after: ", after.toNumber());
             before.minus(after).should.be.bignumber.above(ether(2));
         });
 
         it("Buyer can't buy tokens when under minimum.", async () => {
             buyers.forEach(async (buyer) => {
-                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(0.5), from: buyer, gas: gas, gasPrice: web3.eth.gasPrice }); }
+                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(0.5), from: buyer, gas: gas }); }
                 catch(error) {}
             });
 
@@ -106,19 +104,15 @@ contract("PRESALE", function (accounts) {
 
         it("Buyer can't buy tokens when over exceed.", async () => {
             buyers.forEach(async (buyer) => {
-                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(6), from: buyer, gas: gas, gasPrice: web3.eth.gasPrice }); }
+                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(6), from: buyer, gas: gas }); }
                 catch(error) {}
             });
 
             const before = await web3.eth.getBalance(testAccount);
-            try { await web3.eth.sendTransaction({ to: sale.address, value: ether(15), from: testAccount, gas: gas, gasPrice: web3.eth.gasPrice }); }
+            try { await web3.eth.sendTransaction({ to: sale.address, value: ether(15), from: testAccount, gas: gas }); }
             catch(error) {}
             const after = await web3.eth.getBalance(testAccount);
             const testBalance = await sale.buyers.call(testAccount);
-
-            console.log("before: ", before.toNumber());
-            console.log("after: ", after.toNumber());
-            console.log("testBalance: ", testBalance.toNumber());
 
             testBalance.should.be.bignumber.equal(ether(20));
             before.sub(ether(7)).should.be.bignumber.below(ether(1) + txFee);
@@ -126,136 +120,24 @@ contract("PRESALE", function (accounts) {
 
         it("Buyer can buy tokens when over minimum and under maxcap.", async () => {
             buyers.forEach(async (buyer) => {
-                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(5), from: buyer, gas: gas, gasPrice: web3.eth.gasPrice }); }
+                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(5), from: buyer, gas: gas }); }
                 catch(error) {}
             });
 
             const before = await web3.eth.getBalance(testAccount);
-            try { await web3.eth.sendTransaction({ to: sale.address, value: ether(5), from: testAccount, gas: gas, gasPrice: web3.eth.gasPrice }); }
+            try { await web3.eth.sendTransaction({ to: sale.address, value: ether(5), from: testAccount, gas: gas }); }
             catch(error) {}
             const after = await web3.eth.getBalance(testAccount);
             const testBalance = await sale.buyers.call(testAccount);
-
-            console.log("before: ", before.toNumber());
-            console.log("after: ", after.toNumber());
-            console.log("testBalance: ", testBalance.toNumber());
 
             testBalance.should.be.bignumber.equal(ether(10));
             before.sub(after).should.be.bignumber.below(ether(5) + txFee);
         });
     });
 
-    describe("wallet", () => {
-        it("Shouldn't be changed the wallet by nonownership user.", async () => {
-            await sale.setWallet(testAccount, { from: unregistedBuyer }).should.be.rejected;
-        });
-
-        it("Should be changed the wallet by owner.", async () => {
-            const before = await sale.wallet.call();
-            await sale.setWallet(testAccount, { from: owner }).should.be.fulfilled;
-            const after = await sale.wallet.call();
-            console.log("before: ", before);
-            console.log("after: ", after);
-            after.should.not.be.equal(before);
-            after.should.be.equal(testAccount);
-        });
-    });
-
-    describe("change address", () => {
+    describe("ownership", () => {
         const gas = 100000;
 
-        beforeEach(async () => {
-            await sale.start({ from: owner }).should.be.fulfilled;
-        });
-
-        it("Shouldn't be changed the whitelist by nonownership user.", async () => {
-            const list = await Whitelist.new({ from: unregistedBuyer });
-            await sale.setWhitelist(list.address, { from: unregistedBuyer }).should.be.rejected;
-        });
-
-        it("Shouldn't be changed the address in whitelist by nonownership user.", async () => {
-            await sale.buyerAddressTransfer(testAccount, unregistedBuyer, { from: unregistedBuyer }).should.be.rejected;
-        });
-
-        it("Should be changed the whitelist by owner.", async () => {
-            const before = await sale.whiteList.call();
-            const list = await Whitelist.new({ from: owner });
-            await list.addAddressToWhitelist(unregistedBuyer, { from: owner });
-            await sale.setWhitelist(list.address, { from: owner }).should.be.fulfilled;
-            const after = await sale.whiteList.call();
-            console.log("before: ", before);
-            console.log("after: ", after);
-            after.should.not.be.equal(before);
-            after.should.be.equal(list.address);
-        });
-
-        it("Should be changed the address in whitelist by owner.", async () => {
-            buyers.forEach(async (buyer) => {
-                try { await web3.eth.sendTransaction({ to: sale.address, value: ether(5), from: buyer, gas: gas, gasPrice: web3.eth.gasPrice }); }
-                catch(error) {}
-            });
-
-            const list = await Whitelist.new({ from: owner });
-            await list.addAddressesToWhitelist(buyers, { from: owner });
-            await list.addAddressToWhitelist(unregistedBuyer, { from: owner });
-            await sale.setWhitelist(list.address, { from: owner }).should.be.fulfilled;
-
-            const beforeOldBalance = await sale.buyers.call(testAccount);
-            const beforeNewBalance = await sale.buyers.call(unregistedBuyer);
-            console.log("beforeOldBalance: ", beforeOldBalance.toNumber());
-            console.log("beforeNewBalance: ", beforeNewBalance.toNumber());
-            await sale.buyerAddressTransfer(testAccount, unregistedBuyer, { from: owner }).should.be.fulfilled;
-
-            const afterOldBalance = await sale.buyers.call(testAccount);
-            const afterNewBalance = await sale.buyers.call(unregistedBuyer);
-            console.log("afterOldBalance: ", afterOldBalance.toNumber());
-            console.log("afterNewBalance: ", afterNewBalance.toNumber());
-
-            beforeOldBalance.should.be.bignumber.equal(afterNewBalance);
-        });
-    });
-
-    describe("change state", () => {
-        it("Shouldn't be changed state by nonownership user.", async () => {
-            await sale.complete({ from: unregistedBuyer }).should.be.rejected;
-        });
-
-        it("Owner must be able to pause/start.", async () => {
-            let state;
-            let stateValue;
-
-            await sale.pause({ from: owner }).should.be.fulfilled;
-            state = await sale.getState().should.be.fulfilled;
-            stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
-            console.log("state: ", stateValue);
-            stateValue.should.be.equal("Pausing");
-
-            await sale.start({ from: owner }).should.be.fulfilled;
-            state = await sale.getState().should.be.fulfilled;
-            stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
-            console.log("state: ", stateValue);
-            stateValue.should.be.equal("Starting");
-        });
-
-        it("Owner must be able to start/complete.", async () => {
-            let state;
-            let stateValue;
-
-            await sale.start({ from: owner }).should.be.fulfilled;
-            state = await sale.getState().should.be.fulfilled;
-            stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
-            console.log("state: ", stateValue);
-            stateValue.should.be.equal("Starting");
-
-            await sale.complete({ from: owner }).should.be.fulfilled;
-            state = await sale.getState().should.be.fulfilled;
-            stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
-            console.log("state: ", stateValue);
-            stateValue.should.be.equal("Completed");
-        });
-    });
-
-    describe("ownership", () => {
         describe("whitelist", () => {
             let newWhitelist;
             beforeEach(async () => { newWhitelist = await Whitelist.new({ from: owner }); });
@@ -270,6 +152,35 @@ contract("PRESALE", function (accounts) {
                 await sale
                     .setWhitelist(newWhitelist.address, { from: testAccount })
                     .should.be.rejected;
+            });
+
+            it("Shouldn't be changed the address in whitelist by nonownership user.", async () => {
+                await sale.buyerAddressTransfer(testAccount, unregistedBuyer, { from: unregistedBuyer }).should.be.rejected;
+            });
+
+            it("Should be changed the address in whitelist by owner.", async () => {
+                await sale.start({ from: owner }).should.be.fulfilled;
+
+                buyers.forEach(async (buyer) => {
+                    try { await web3.eth.sendTransaction({ to: sale.address, value: ether(5), from: buyer, gas: gas }); }
+                    catch(error) {}
+                });
+
+                await whitelist.addAddressToWhitelist(unregistedBuyer, { from: owner }).should.be.fulfilled
+                await sale.setWhitelist(whitelist.address, { from: owner }).should.be.fulfilled;
+
+                const beforeOldBalance = await sale.buyers.call(testAccount);
+                const beforeNewBalance = await sale.buyers.call(unregistedBuyer);
+                console.log("beforeOldBalance: ", beforeOldBalance.toNumber());
+                console.log("beforeNewBalance: ", beforeNewBalance.toNumber());
+                await sale.buyerAddressTransfer(testAccount, unregistedBuyer, { from: owner }).should.be.fulfilled;
+
+                const afterOldBalance = await sale.buyers.call(testAccount);
+                const afterNewBalance = await sale.buyers.call(unregistedBuyer);
+                console.log("afterOldBalance: ", afterOldBalance.toNumber());
+                console.log("afterNewBalance: ", afterNewBalance.toNumber());
+
+                beforeOldBalance.should.be.bignumber.equal(afterNewBalance);
             });
         });
 
@@ -306,9 +217,50 @@ contract("PRESALE", function (accounts) {
                     .should.be.rejected;
             });
         });
+
+        describe("change state", () => {
+            it("Shouldn't be changed state by nonownership user.", async () => {
+                await sale.complete({ from: unregistedBuyer }).should.be.rejected;
+            });
+
+            it("Owner must be able to pause/start.", async () => {
+                let state;
+                let stateValue;
+
+                await sale.pause({ from: owner }).should.be.fulfilled;
+                state = await sale.getState().should.be.fulfilled;
+                stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
+                console.log("state: ", stateValue);
+                stateValue.should.be.equal("Pausing");
+
+                await sale.start({ from: owner }).should.be.fulfilled;
+                state = await sale.getState().should.be.fulfilled;
+                stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
+                console.log("state: ", stateValue);
+                stateValue.should.be.equal("Starting");
+            });
+
+            it("Owner must be able to start/complete.", async () => {
+                let state;
+                let stateValue;
+
+                await sale.start({ from: owner }).should.be.fulfilled;
+                state = await sale.getState().should.be.fulfilled;
+                stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
+                console.log("state: ", stateValue);
+                stateValue.should.be.equal("Starting");
+
+                await sale.complete({ from: owner }).should.be.fulfilled;
+                state = await sale.getState().should.be.fulfilled;
+                stateValue = await sale.getKeyByValue(state).should.be.fulfilled;
+                console.log("state: ", stateValue);
+                stateValue.should.be.equal("Completed");
+            });
+        });
     });
 
     describe("finalize", () => {
+        const gas = 100000;
         it("Could not be finalized when contract state is starting.", async () => {
             await sale.start({ from: owner }).should.be.fulfilled;
             await sale.finalize({ from: owner }).should.be.rejected;
@@ -318,7 +270,7 @@ contract("PRESALE", function (accounts) {
             const amount = ether(5);
             const beforeBalance = await web3.eth.getBalance(wallet);
             await sale.start({ from: owner }).should.be.fulfilled;
-            await web3.eth.sendTransaction({ gas: 100000, to: sale.address, value: amount, from: testAccount });
+            await web3.eth.sendTransaction({ to: sale.address, value: amount, from: testAccount, gas: gas });
             await sale.complete({ from: owner }).should.be.fulfilled;
             await sale.release(buyers, { from: owner }).should.be.fulfilled;
 
@@ -342,13 +294,13 @@ contract("PRESALE", function (accounts) {
 
         describe("Could be released when contract state is completed.", () => {
             const amount1 = ether(10);
-            const amount2 = ether(5);
+            const amount2 = ether(1);
             const gas = 100000;
 
             it("raised up to maxcap", async () => {
                 await sale.start({ from: owner }).should.be.fulfilled;
                 buyers.forEach(async (buyer) => {
-                    try { await web3.eth.sendTransaction({ gas: gas, to: sale.address, value: amount1, from: buyer }); }
+                    try { await web3.eth.sendTransaction({ to: sale.address, value: amount1, from: buyer, gas: gas }); }
                     catch(error) {}
                 });
 
@@ -367,7 +319,7 @@ contract("PRESALE", function (accounts) {
             it("raised less than maxcap", async () => {
                 await sale.start({ from: owner }).should.be.fulfilled;
                 buyers.forEach(async (buyer) => {
-                    try { await web3.eth.sendTransaction({ gas: gas, to: sale.address, value: amount2, from: buyer }); }
+                    try { await web3.eth.sendTransaction({ to: sale.address, value: amount2, from: buyer, gas: gas }); }
                     catch(error) {}
                 });
 
@@ -407,7 +359,7 @@ contract("PRESALE", function (accounts) {
             it("raised up to maxcap", async () => {
                 await sale.start({ from: owner }).should.be.fulfilled;
                 buyers.forEach(async (buyer) => {
-                    try { await web3.eth.sendTransaction({ to: sale.address, value: amount1, from: buyer, gas: gas, gasPrice: web3.eth.gasPrice }); }
+                    try { await web3.eth.sendTransaction({ to: sale.address, value: amount1, from: buyer, gas: gas }); }
                     catch(error) {}
                 });
 
@@ -437,7 +389,7 @@ contract("PRESALE", function (accounts) {
             it("raised less than maxcap", async () => {
                 await sale.start({ from: owner }).should.be.fulfilled;
                 buyers.forEach(async (buyer) => {
-                    try { await web3.eth.sendTransaction({ to: sale.address, value: amount2, from: buyer, gas: gas, gasPrice: web3.eth.gasPrice }); }
+                    try { await web3.eth.sendTransaction({ to: sale.address, value: amount2, from: buyer, gas: gas }); }
                     catch(error) {}
                 });
 
