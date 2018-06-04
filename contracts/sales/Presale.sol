@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity 0.4.23;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
@@ -6,6 +6,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Whitelist.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../utils/Stateable.sol";
+
 
 contract Presale is Stateable {
     using SafeMath for uint256;
@@ -26,6 +27,16 @@ contract Presale is Stateable {
     modifier validAddress(address _account) {
         require(_account != address(0));
         require(_account != address(this));
+        _;
+    }
+
+    modifier limit(address[] _addrs) {
+        require(_addrs.length <= 30);
+        _;
+    }
+
+    modifier completed() {
+        require(getState() == State.Completed);
         _;
     }
 
@@ -60,12 +71,12 @@ contract Presale is Stateable {
 
     function setWhitelist(address _whitelist) external onlyOwner validAddress(_whitelist) {
         whiteList = Whitelist(_whitelist);
-        emit ChangeExternalAddress(_whitelist, "whitelist");
+        emit EventChangeExternalAddress(_whitelist, "whitelist");
     }
 
     function setWallet(address _wallet) external onlyOwner validAddress(_wallet) {
         wallet = _wallet;
-        emit ChangeExternalAddress(_wallet, "wallet");
+        emit EventChangeExternalAddress(_wallet, "wallet");
     }
 
     function pause() external onlyOwner {
@@ -80,9 +91,34 @@ contract Presale is Stateable {
         setState(State.Completed);
     }
 
-    modifier completed() {
-        require(getState() == State.Completed);
-        _;
+    function buyerAddressTransfer(address _from, address _to) external onlyOwner validAddress(_from) validAddress(_to) {
+        require(whiteList.whitelist(_from));
+        require(whiteList.whitelist(_to));
+        require(buyers[_from] > 0);
+        require(buyers[_to] == 0);
+
+        buyers[_to] = buyers[_from];
+        buyers[_from] = 0;
+
+        emit EventBuyerAddressTransfer(_from, _to);
+    }
+
+    function refund(address[] _addrs) external onlyOwner completed limit(_addrs) {
+        for (uint256 i = 0; i < _addrs.length; i++) {
+            refund(_addrs[i]);
+        }
+    }
+
+    function release(address[] _addrs) external onlyOwner completed limit(_addrs) {
+        for (uint256 i = 0; i < _addrs.length; i++) {
+            release(_addrs[i]);
+        }
+    }
+
+    function finalize() external onlyOwner completed {
+        withdrawEther();
+        withdrawToken();
+        setState(State.Finalized);
     }
 
     function collect() public payable {
@@ -103,23 +139,21 @@ contract Presale is Stateable {
         weiRaised = weiRaised.add(purchase);
 
         buyers[buyer] = buyers[buyer].add(purchase);
-        emit Purchase(buyer, purchase, refund, purchase.mul(rate));
+        emit EventPurchase(buyer, purchase, refund, purchase.mul(rate));
 
         if (refund > 0) {
             buyer.transfer(refund);
         }
     }
 
-    function buyerAddressTransfer(address _from, address _to) external onlyOwner validAddress(_from) validAddress(_to) {
-        require(whiteList.whitelist(_from));
-        require(whiteList.whitelist(_to));
-        require(buyers[_from] > 0);
-        require(buyers[_to] == 0);
+    function withdrawToken() public onlyOwner completed {
+        token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+        emit EventWithdrawToken(msg.sender, token.balanceOf(address(this)));
+    }
 
-        buyers[_to] = buyers[_from];
-        buyers[_from] = 0;
-
-        emit BuyerAddressTransfer(_from, _to);
+    function withdrawEther() public onlyOwner completed {
+        wallet.transfer(address(this).balance);
+        emit EventWithdrawEther(wallet, address(this).balance);
     }
 
     function getPurchaseAmount(address _buyer, uint256 _amount) private view returns (uint256, uint256) {
@@ -130,13 +164,8 @@ contract Presale is Stateable {
         return (possibleAmount, _amount.sub(possibleAmount));
     }
 
-    function min(uint256 val1, uint256 val2) private pure returns (uint256){
+    function min(uint256 val1, uint256 val2) private pure returns (uint256) {
         return (val1 > val2) ? val2 : val1;
-    }
-
-    modifier limit(address[] _addrs) {
-        require(_addrs.length <= 30);
-        _;
     }
 
     function release(address _addr) private validAddress(_addr) {
@@ -144,15 +173,9 @@ contract Presale is Stateable {
             uint256 releaseAmount = buyers[_addr].mul(rate);
             buyers[_addr] = 0;
             token.safeTransfer(_addr, releaseAmount);
-            emit Release(_addr, releaseAmount);
+            emit EventRelease(_addr, releaseAmount);
         } else {
-            emit Fail(_addr, "release");
-        }
-    }
-
-    function release(address[] _addrs) external onlyOwner completed limit(_addrs) {
-        for (uint256 i = 0; i < _addrs.length; i++) {
-            release(_addrs[i]);
+            emit EventFail(_addr, "release");
         }
     }
 
@@ -161,43 +184,21 @@ contract Presale is Stateable {
             uint256 refundAmount = buyers[_addr];
             buyers[_addr] = 0;
             _addr.transfer(refundAmount);
-            emit Refund(_addr, refundAmount);
+            emit EventRefund(_addr, refundAmount);
         } else {
-            emit Fail(_addr, "refund");
+            emit EventFail(_addr, "refund");
         }
     }
 
-    function refund(address[] _addrs) external onlyOwner completed limit(_addrs) {
-        for (uint256 i = 0; i < _addrs.length; i++) {
-            refund(_addrs[i]);
-        }
-    }
+    event EventPurchase(address indexed _buyer, uint256 _purchased, uint256 _refund, uint256 _tokens);
 
-    function finalize() external onlyOwner completed {
-        withdrawEther();
-        withdrawToken();
-        setState(State.Finalized);
-    }
+    event EventChangeExternalAddress(address _addr, string _name);
+    event EventBuyerAddressTransfer(address indexed _from, address indexed _to);
 
-    function withdrawToken() public onlyOwner completed {
-        token.safeTransfer(msg.sender, token.balanceOf(address(this)));
-        emit WithdrawToken(msg.sender, token.balanceOf(address(this)));
-    }
+    event EventRelease(address indexed _to, uint256 _amount);
+    event EventRefund(address indexed _to, uint256 _amount);
+    event EventFail(address indexed _addr, string _reason);
 
-    function withdrawEther() public onlyOwner completed {
-        wallet.transfer(address(this).balance);
-        emit WithdrawEther(wallet, address(this).balance);
-    }
-
-    event Purchase(address indexed _buyer, uint256 _purchased, uint256 _refund, uint256 _tokens);
-
-    event ChangeExternalAddress(address _addr, string _name);
-    event BuyerAddressTransfer(address indexed _from, address indexed _to);
-
-    event Release(address indexed _to, uint256 _amount);
-    event Refund(address indexed _to, uint256 _amount);
-    event Fail(address indexed _addr, string _reason);
-
-    event WithdrawToken(address indexed _from, uint256 _amount);
-    event WithdrawEther(address indexed _from, uint256 _amount);
+    event EventWithdrawToken(address indexed _from, uint256 _amount);
+    event EventWithdrawEther(address indexed _from, uint256 _amount);
 }
